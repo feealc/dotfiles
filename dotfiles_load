@@ -1,0 +1,49 @@
+
+# echo "dotfiles_load"
+
+export HOME_DOTFILES=${HOME}/.dotfiles
+
+function unalias_file
+{
+    FILE_NAME=${1}
+    for NAME in `egrep "^alias|^function" ${FILE_NAME} | awk -F "=" '{ print $1 }' | awk '{ print $2 }'`; do
+        # echo "NAME ["${NAME}"]"
+
+        # whence -w ${NAME}
+        ret_name=$(whence -w ${NAME} | awk '{ print $2 }')
+        case "${ret_name}" in
+            # file|builtin|keyword|function|command)
+            file|builtin|keyword|command)
+                warn "conflict: name ${NAME} already used by a ${ret_name} in ${FILE_NAME}"
+                return 1
+                ;;
+            # alias)
+                # echo "Already an alias"
+                # return 0
+                # ;;
+            # *)
+                # echo "Name is free"
+                # return 0
+                # ;;
+        esac
+
+        unalias ${NAME} 2>/dev/null
+    done
+
+    return 0
+}
+
+for file in \
+    ${HOME_DOTFILES}/bvars.sh \
+    ${HOME_DOTFILES}/bcolors.sh \
+    ${HOME_DOTFILES}/bfuncs.sh \
+    ${(@f)$(find -H "${HOME_DOTFILES}" -maxdepth 2 -type f -name "*.zsh" | sort)}
+do
+    # qtde_alias_func=$(egrep "^alias|^function" ${file} | wc -l | awk '{ print $1 }' )
+    # echo "file [${file}] qtde [${qtde_alias_func}]"
+    unalias_file ${file}
+    if [[ $? -ne 0 ]]; then
+        return
+    fi
+    source ${file}
+done
