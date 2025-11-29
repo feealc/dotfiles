@@ -1,0 +1,3 @@
+
+export EXIT_ERROR=0
+export EXIT_SUCCESS=1
