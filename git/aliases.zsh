@@ -1,28 +1,30 @@
 # Git Alias
 
-# unalias ghelp 2>/dev/null
-# function ghelp
-# {
-#     echo "========================================"
-#     egrep "^alias|^function|^\#\#" ${HOME_SANDBOXBRUM}/profile/.bprofile_git
-#     echo "========================================"
-# }
+function gh
+{
+    echo "========================================"
+    egrep "^alias|^function|^\#\#" ${HOME_DOTFILES}/git/aliases.zsh
+    echo "========================================"
+}
+
+alias g="git"
 
 ## Add
 alias ga="git add"
 alias gaa="git add --all"
+alias gai="git add --interactive"
 alias gap="git add --patch"
 
 ## Branch
 alias gb="git branch"
-alias gba="git branch -a"
-alias gbr="git branch -r"
-alias gbd="git branch -d"
-alias gbD="git branch -D"
+alias gba="git branch --all"
+alias gbd="git branch --delete"
+alias gbdf="git branch --delete --force"
+alias gbr="git branch --remotes"
 alias gbvv="git branch -vv"
-alias gbm="branch_merged S"
-alias gbmd="branch_merged S S"
 alias gbms="branch_merged"
+alias gbm="branch_merged S"
+alias gbmf="branch_merged S S"
 alias gbmv="git branch --move"
 function branch_merged
 {
@@ -32,9 +34,9 @@ function branch_merged
     if [[ ${1} == "S" ]]; then
         for BRANCH in `cat ${FILE_BRANCHS_MERGED}`; do
             if [[ ${2} == "S" ]]; then
-                git branch -D ${BRANCH}
+                git branch --delete --force ${BRANCH}
             else
-                git branch -d ${BRANCH}
+                git branch --delete ${BRANCH}
             fi
         done
     else
@@ -49,27 +51,20 @@ alias gbl="git blame"
 
 ## Checkout
 alias gco="git checkout"
-alias gcom="git checkout main"
-alias gcod="git checkout develop"
-alias gcob="git checkout -b"
-unalias gj 2>/dev/null
-function gj
-{
-    if [[ $1 -lt 10 ]]; then MUD="0${1}"; else MUD=$1; fi
-    git checkout release-MUD-J$MUD;
-}
+# alias gcom="git checkout main"
+# alias gcod="git checkout develop"
+# alias gcob="git checkout -b"
 
 ## Cherry-Pick
-alias gcp="git cherry-pick"
-alias gcpc="git cherry-pick --continue"
-alias gcpa="git cherry-pick --abort"
+# alias gcp="git cherry-pick"
+# alias gcpc="git cherry-pick --continue"
+# alias gcpa="git cherry-pick --abort"
 
 ## Clone
 alias gcl="git clone"
 alias gclsm="git clone --recurse-submodules"
 
 ## Commit
-unalias gcm 2>/dev/null
 function gcm
 {
     commit_message=""
@@ -86,8 +81,31 @@ function gcm
         echo "commit message vazia"
         return 1
     else
-        git commit -m "${commit_message}"
+        allow_empty_option=$(git_check_stagin_area_empty)
+        git commit ${allow_empty_option} -m "${commit_message}"
     fi
+}
+function gcma
+{
+    commit_message=""
+    while [[ ${1} != "" ]]; do
+        if [[ ${commit_message} == "" ]]; then
+            commit_message="${1}"
+        else
+            commit_message="${commit_message} ${1}"
+        fi
+        shift
+    done
+
+    commit_amend_options=""
+    if [[ -z ${commit_message} ]]; then
+        commit_amend_options="--no-edit"
+    else
+        commit_amend_options="-m \"${commit_message}\""
+    fi
+
+    allow_empty_option=$(git_check_stagin_area_empty)
+    git commit ${allow_empty_option} --amend ${commit_amend_options}
 }
 
 ## Diff
@@ -95,50 +113,50 @@ alias gd="git diff"
 alias gds="git diff --staged"
 
 ## Fetch
-alias gf="git fetch --prune --prune-tags --force --recurse-submodules"
-alias gff="git fetch --prune --force --recurse-submodules"
+alias gf="git fetch --prune --prune-tags --recurse-submodules"
+alias gff="git fetch --prune --prune-tags --force --recurse-submodules"
 
 ## Log
-alias glg="git log --pretty=format:'%Cblue%H%Creset %C(bold)%cs%Creset %Cgreen<%an>%Creset %s' --max-count=20"
-unalias glgx 2>/dev/null
+GIT_LOG_FORMAT="%Cblue%H%Creset %C(bold)%cs%Creset %Cgreen<%an>%Creset %s"
 function glgx
 {
     max_count=${1}
     if [ -z ${max_count} ]; then max_count=10; fi
-    git log --pretty=format:'%Cblue%H%Creset %C(bold)%cs%Creset %Cgreen<%an>%Creset %s' --max-count=${max_count}
+    git log --pretty=format:"${GIT_LOG_FORMAT}" --max-count=${max_count}
 }
+alias glg="glgx 20"
 
 ## Pull
-unalias gpl 2>/dev/null
 function gpl
 {
-    current_branch=$(git rev-parse --abbrev-ref HEAD)
+    current_branch=$(git_current_branch_name)
     git pull origin ${current_branch}
+}
+function gplr
+{
+    current_branch=$(git_current_branch_name)
+    git pull --rebase origin ${current_branch}
 }
 
 ## Push
-unalias gps 2>/dev/null
 function gps
 {
-    current_branch=$(git rev-parse --abbrev-ref HEAD)
+    current_branch=$(git_current_branch_name)
     git push origin ${current_branch}
 }
-unalias gpst 2>/dev/null
 function gpst
 {
-    current_branch=$(git rev-parse --abbrev-ref HEAD)
-    git push -u origin ${current_branch}
+    current_branch=$(git_current_branch_name)
+    git push --set-upstream origin ${current_branch}
 }
-unalias gpsf 2>/dev/null
 function gpsf
 {
-    current_branch=$(git rev-parse --abbrev-ref HEAD)
-    git push -f origin ${current_branch}
+    current_branch=$(git_current_branch_name)
+    git push --force origin ${current_branch}
 }
 
 ## Stash
 alias gsl="echo 'Stash list:'; git stash list; echo "-""
-unalias gsp 2>/dev/null
 function gsp
 {
     stash_message=""
@@ -155,21 +173,26 @@ function gsp
         echo "stash message vazia"
         return 1
     else
-        git stash push --include-untracked  --message "${stash_message}"
+        git stash push --include-untracked --message "${stash_message}"
     fi
 }
 
 ## Status
-alias gs="git status -sbu"
-alias gst="git status -u"
+alias gs="git status --short --branch --untracked-files --show-stash"
+alias gst="git status --untracked-files"
 
 ## Submodule
 alias gsubir="git submodule update --init --recursive"
 alias gsubr="git submodule update --recursive"
 
+## Switch
+alias gsm="git switch main"
+alias gsd="git switch develop"
+alias gsc="git switch --create"
+
 ## Outros
-alias grollback="git reset --soft HEAD~1"
-alias gunstage="git reset HEAD --"
-alias gunstageall="git reset HEAD"
-alias gundo="git checkout --"
-alias gundoall="git checkout ."
+alias grb="git reset --soft HEAD~1" # desfaz ultimo commit e as alteracoes voltam pra staging area, sem alteracao
+alias gus="git reset HEAD --" # volta o arquivo da staging area para working area, sem alterar o conteudo
+alias gusa="git reset HEAD" # volta todos os arquivos da staging area para working area, sem alterar o conteudo
+alias gud="git checkout --" # descarta as alteracoes de um arquivo e volta para a ultima versao comitada
+alias guda="git checkout ." # descarta todas alteracoes e volta para a ultima versao comitada
