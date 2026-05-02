@@ -8,6 +8,7 @@ function gh
 }
 
 alias g="git"
+alias gnp="git --no-pager"
 
 ## Add
 alias ga="git add"
@@ -65,6 +66,10 @@ alias gcl="git clone"
 alias gclsm="git clone --recurse-submodules"
 
 ## Commit
+function gcmd
+{
+    git commit --allow-empty -m "dev $*"
+}
 function gcm
 {
     commit_message=""
@@ -81,7 +86,7 @@ function gcm
         echo "commit message vazia"
         return 1
     else
-        allow_empty_option=$(git_check_stagin_area_empty)
+        allow_empty_option=$(git_check_staging_area_empty)
         git commit ${allow_empty_option} -m "${commit_message}"
     fi
 }
@@ -104,7 +109,7 @@ function gcma
         commit_amend_options="-m \"${commit_message}\""
     fi
 
-    allow_empty_option=$(git_check_stagin_area_empty)
+    allow_empty_option=$(git_check_staging_area_empty)
     git commit ${allow_empty_option} --amend ${commit_amend_options}
 }
 
@@ -186,9 +191,10 @@ alias gsubir="git submodule update --init --recursive"
 alias gsubr="git submodule update --recursive"
 
 ## Switch
-alias gsm="git switch main"
-alias gsd="git switch develop"
-alias gsc="git switch --create"
+alias gsw="git switch"
+alias gswm="git switch main"
+alias gswd="git switch develop"
+alias gswc="git switch --create"
 
 ## Outros
 alias grb="git reset --soft HEAD~1" # desfaz ultimo commit e as alteracoes voltam pra staging area, sem alteracao

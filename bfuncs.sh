@@ -29,7 +29,7 @@ function exit_nok
 
 # Git functions
 
-function git_check_stagin_area_empty
+function git_check_staging_area_empty
 {
     allow_empty_option=""
     if git diff --cached --quiet; then # staging area is empty
