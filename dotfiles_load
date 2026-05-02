@@ -3,11 +3,27 @@
 
 export HOME_DOTFILES=${HOME}/.dotfiles
 
+CHECK_FILE_TMP="${HOME}/dotfiles_load.tmp"
+
+function remove_file_tmp
+{
+    if [[ -e ${CHECK_FILE_TMP} ]]; then
+        rm -rf ${CHECK_FILE_TMP}
+    fi
+}
+
+function clear_file_tmp
+{
+    remove_file_tmp
+    touch ${CHECK_FILE_TMP}
+}
+
 function unalias_file
 {
     FILE_NAME=${1}
     for NAME in `egrep "^alias|^function" ${FILE_NAME} | awk -F "=" '{ print $1 }' | awk '{ print $2 }'`; do
         # echo "NAME ["${NAME}"]"
+        # echo "\nNAME ["${NAME}"] FILE [${FILE_NAME}]"
 
         # whence -w ${NAME}
         ret_name=$(whence -w ${NAME} | awk '{ print $2 }')
@@ -27,11 +43,30 @@ function unalias_file
                 # ;;
         esac
 
+        # check to see if alias/function does not exist in another file
+        CMD_EGREP="egrep -w '^alias ${NAME}\=|^function ${NAME}' ${CHECK_FILE_TMP}"
+        QTDE_LINES=$(eval "${CMD_EGREP}" | wc -l | awk '{ print $1 }')
+        if [[ ${QTDE_LINES} -gt 1 ]]; then
+            warn "conflict: name ${NAME} already exist"
+            eval "${CMD_EGREP}" | awk -F "###" '{ printf("%s => %s\n", $1, $2) }'
+            return 1
+        fi
+
         unalias ${NAME} 2>/dev/null
     done
 
     return 0
 }
+
+# Start
+
+clear_file_tmp
+
+# Fill tmp file with all alias and functions
+for FILEAF in $(find -H "${HOME_DOTFILES}" -maxdepth 2 -type f \( -name "*.zsh" -o -name "*.sh" \) | sort); do
+    # echo "FILEAF [${FILEAF}]"
+    egrep -w "^alias|^function" ${FILEAF} | awk -v FILENAME=${FILEAF} '{ printf("%s###%s\n", $0, FILENAME) }' >> ${CHECK_FILE_TMP}
+done
 
 for file in \
     ${HOME_DOTFILES}/bvars.sh \
@@ -43,7 +78,10 @@ do
     # echo "file [${file}] qtde [${qtde_alias_func}]"
     unalias_file ${file}
     if [[ $? -ne 0 ]]; then
+        remove_file_tmp
         return
     fi
     source ${file}
 done
+
+remove_file_tmp

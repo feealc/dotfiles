@@ -1,4 +1,5 @@
 
+alias gc="${HOME_DOTFILES}/git/gitconfig.sh"
 alias pg="cd ${HOME}/Documents/ProjetosGit"
 alias ppy="cd ${HOME}/Documents/ProjetosPython"
 alias px="cd ${HOME}/Documents/ProjetosXcode"
